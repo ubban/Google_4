@@ -36,12 +36,49 @@
     left: 50%; transform: translateX(-50%);
     color: #fff;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-    font-size: clamp(14px, 3vw, 20px);
+    font-size: clamp(13px, 3vw, 17px);
     display: flex;
-    gap: clamp(14px, 4vw, 30px);
+    gap: clamp(10px, 3vw, 18px);
     pointer-events: none;
     z-index: 5;
     white-space: nowrap;
+  }
+  #hud .stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.32);
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 6px 12px;
+    border-radius: 999px;
+    backdrop-filter: blur(4px);
+  }
+  #hud .label { opacity: 0.75; font-weight: 400; }
+  #hud .val { font-weight: 700; color: #ffd54f; }
+  #hearts { display: flex; gap: 3px; }
+  #hearts span { font-size: clamp(13px, 3vw, 17px); filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8)); }
+  #hearts span.lost { opacity: 0.25; filter: none; }
+  #comboPop {
+    position: absolute;
+    left: 50%; top: 30%;
+    transform: translate(-50%, -50%) scale(0.6);
+    color: #fff176;
+    font-size: clamp(20px, 6vw, 36px);
+    font-weight: 800;
+    text-shadow: 0 0 10px rgba(255,193,7,0.9), 2px 2px 4px rgba(0,0,0,0.8);
+    pointer-events: none;
+    z-index: 6;
+    opacity: 0;
+    letter-spacing: 1px;
+  }
+  #comboPop.show {
+    animation: comboPulse 0.6s ease-out;
+  }
+  @keyframes comboPulse {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    25% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+    60% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -55%) scale(1); }
   }
   #topBar {
     position: absolute;
@@ -73,34 +110,62 @@
     z-index: 10;
     padding: 20px;
   }
-  #overlay h1 { font-size: clamp(30px, 7vw, 48px); margin: 0 0 6px; text-shadow: 2px 2px 6px #000; letter-spacing: 1px; }
-  #overlay p { font-size: clamp(13px, 3vw, 16px); margin: 4px; opacity: 0.9; max-width: 420px; }
+  #overlay h1 {
+    font-size: clamp(32px, 8vw, 52px);
+    margin: 0 0 6px;
+    text-shadow: 0 0 24px rgba(25,118,210,0.8), 2px 2px 6px #000;
+    letter-spacing: 1px;
+    background: linear-gradient(180deg, #fff 20%, #ffd54f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #overlay p { font-size: clamp(13px, 3vw, 16px); margin: 4px; opacity: 0.85; max-width: 420px; }
+  #overlayCard {
+    background: rgba(10,22,48,0.55);
+    border: 1px solid rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: clamp(24px, 5vw, 40px) clamp(20px, 6vw, 48px);
+    display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
   #statsRow { display: flex; gap: 24px; margin: 14px 0; font-size: clamp(14px, 3vw, 18px); }
   #statsRow b { color: #ffd54f; }
+  #newBest {
+    color: #7CFC00;
+    font-weight: 700;
+    font-size: clamp(13px, 3vw, 16px);
+    margin: 0 0 4px;
+    text-shadow: 0 0 10px rgba(124,252,0,0.6);
+  }
   #startBtn {
     margin-top: 18px;
     padding: 14px 38px;
     font-size: clamp(16px, 4vw, 20px);
-    background: #ffcc00;
+    background: linear-gradient(180deg, #ffe066, #ffcc00);
     border: none;
     border-radius: 999px;
     cursor: pointer;
     font-weight: 700;
-    box-shadow: 0 4px 14px rgba(255,204,0,0.4);
-    transition: transform 0.1s ease;
+    color: #3a2a00;
+    box-shadow: 0 4px 14px rgba(255,204,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
   }
-  #startBtn:active { transform: scale(0.96); }
+  #startBtn:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(255,204,0,0.4); }
   #diffRow { display: flex; gap: 10px; margin-top: 16px; }
   .diffBtn {
     padding: 8px 16px;
     border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.4);
-    background: transparent;
+    background: rgba(255,255,255,0.05);
     color: #fff;
     cursor: pointer;
     font-size: 14px;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
   }
-  .diffBtn.active { background: #1976d2; border-color: #1976d2; }
+  .diffBtn:active { transform: scale(0.94); }
+  .diffBtn.active { background: #1976d2; border-color: #64b5f6; box-shadow: 0 0 12px rgba(25,118,210,0.6); }
   #touchControls {
     position: absolute;
     inset: 0;
@@ -151,10 +216,12 @@
   <canvas id="gameCanvas"></canvas>
 
   <div id="hud">
-    <div>Score: <span id="score">0</span></div>
-    <div>Best: <span id="best">0</span></div>
-    <div>Lives: <span id="lives">3</span></div>
+    <div class="stat"><span class="label">Score</span><span class="val" id="score">0</span></div>
+    <div class="stat"><span class="label">Best</span><span class="val" id="best">0</span></div>
+    <div class="stat" id="hearts"></div>
   </div>
+
+  <div id="comboPop"></div>
 
   <div id="topBar">
     <button id="muteBtn" class="iconBtn" title="Mute/unmute">🔊</button>
@@ -168,18 +235,21 @@
   </div>
 
   <div id="overlay">
-    <h1 id="overlayTitle">Sky Fighter</h1>
-    <p id="overlaySub">Arrow keys / WASD to move, Space to shoot. On mobile: drag left side to fly, tap FIRE.</p>
-    <div id="statsRow" hidden>
-      <div>Score: <b id="finalScore">0</b></div>
-      <div>Best: <b id="finalBest">0</b></div>
+    <div id="overlayCard">
+      <h1 id="overlayTitle">Sky Fighter</h1>
+      <p id="overlaySub">Arrow keys / WASD to move, Space to shoot. On mobile: drag left side to fly, tap FIRE.</p>
+      <p id="newBest" hidden>🏆 New Best Score!</p>
+      <div id="statsRow" hidden>
+        <div>Score: <b id="finalScore">0</b></div>
+        <div>Best: <b id="finalBest">0</b></div>
+      </div>
+      <div id="diffRow">
+        <button class="diffBtn" data-diff="easy">Easy</button>
+        <button class="diffBtn active" data-diff="normal">Normal</button>
+        <button class="diffBtn" data-diff="hard">Hard</button>
+      </div>
+      <button id="startBtn">Start Game</button>
     </div>
-    <div id="diffRow">
-      <button class="diffBtn" data-diff="easy">Easy</button>
-      <button class="diffBtn active" data-diff="normal">Normal</button>
-      <button class="diffBtn" data-diff="hard">Hard</button>
-    </div>
-    <button id="startBtn">Start Game</button>
   </div>
 </div>
 
@@ -198,7 +268,9 @@
   const startBtn = document.getElementById('startBtn');
   const scoreEl = document.getElementById('score');
   const bestEl = document.getElementById('best');
-  const livesEl = document.getElementById('lives');
+  const heartsEl = document.getElementById('hearts');
+  const comboPopEl = document.getElementById('comboPop');
+  const newBestEl = document.getElementById('newBest');
   const muteBtn = document.getElementById('muteBtn');
   const pauseBtn = document.getElementById('pauseBtn');
   const touchControls = document.getElementById('touchControls');
@@ -254,6 +326,28 @@
     hit: () => beep(200, 0.3, 'triangle', 0.15),
     gameover: () => { beep(300, 0.2, 'sawtooth', 0.15); setTimeout(() => beep(150, 0.4, 'sawtooth', 0.15), 150); }
   };
+
+  function renderHearts(count, max) {
+    let html = '';
+    for (let i = 0; i < max; i++) {
+      html += `<span class="${i < count ? '' : 'lost'}">❤️</span>`;
+    }
+    heartsEl.innerHTML = html;
+  }
+
+  let comboPopTimer = null;
+  function showComboPop(text) {
+    comboPopEl.textContent = text;
+    comboPopEl.classList.remove('show');
+    void comboPopEl.offsetWidth;
+    comboPopEl.classList.add('show');
+  }
+
+  let shakeTime = 0, shakeMag = 0;
+  function screenShake(mag, dur) {
+    shakeMag = mag;
+    shakeTime = dur;
+  }
 
   function updateMuteBtn() {
     muteBtn.textContent = muted ? '🔇' : '🔊';
@@ -357,8 +451,8 @@
 
   // ---------- Game state ----------
   let player, bullets, enemies, enemyBullets, particles, powerUps;
-  let score = 0, lives = 3, running = false, paused = false, gameOver = false;
-  let spawnTimer = 0, frame = 0;
+  let score = 0, lives = 3, maxLives = 3, running = false, paused = false, gameOver = false;
+  let spawnTimer = 0, frame = 0, kills = 0;
   let lastTime = 0;
 
   function resetGame() {
@@ -377,9 +471,11 @@
     paused = false;
     gameOver = false;
     scoreEl.textContent = score;
-    livesEl.textContent = lives;
+    maxLives = lives;
+    renderHearts(lives, maxLives);
     bestEl.textContent = bestScore;
     pauseBtn.textContent = '⏸';
+    kills = 0;
   }
 
   function drawPlane(x, y, w, h, color) {
@@ -496,6 +592,8 @@
           score += 10;
           scoreEl.textContent = score;
           sfx.explode();
+          kills++;
+          if (kills > 0 && kills % 10 === 0) showComboPop(kills + ' KILLS!');
           break;
         }
       }
@@ -532,8 +630,9 @@
   function loseLife() {
     if (gameOver) return;
     lives--;
-    livesEl.textContent = Math.max(lives, 0);
+    renderHearts(Math.max(lives, 0), maxLives);
     sfx.hit();
+    screenShake(10, 0.3);
     if (lives <= 0) endGame();
   }
 
@@ -541,12 +640,15 @@
     running = false;
     gameOver = true;
     sfx.gameover();
-    if (score > bestScore) {
+    screenShake(16, 0.4);
+    const isNewBest = score > bestScore;
+    if (isNewBest) {
       bestScore = score;
       localStorage.setItem(STORAGE_BEST, String(bestScore));
     }
     overlayTitle.textContent = 'Game Over';
     overlaySub.hidden = true;
+    newBestEl.hidden = !isNewBest;
     statsRow.hidden = false;
     finalScoreEl.textContent = score;
     finalBestEl.textContent = bestScore;
@@ -572,6 +674,12 @@
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    if (shakeTime > 0) {
+      const sx = (Math.random() - 0.5) * shakeMag;
+      const sy = (Math.random() - 0.5) * shakeMag;
+      ctx.translate(sx, sy);
+    }
 
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     for (let i = 0; i < 6; i++) {
@@ -616,6 +724,7 @@
       ctx.fillRect(p.x, p.y, 4, 4);
       ctx.globalAlpha = 1;
     });
+    ctx.restore();
   }
 
   function loop(now) {
@@ -626,6 +735,7 @@
 
     if (running && !paused) {
       update(dt);
+      if (shakeTime > 0) shakeTime -= dt;
       draw();
     }
     requestAnimationFrame(loop);
@@ -637,6 +747,7 @@
     resetGame();
     overlaySub.hidden = false;
     statsRow.hidden = true;
+    newBestEl.hidden = true;
     overlay.hidden = true;
   });
 
