@@ -24,7 +24,7 @@
   }
   #gameCanvas {
     display: block;
-    background: linear-gradient(#4fa8ff, #a9dcff);
+    background: linear-gradient(#1e6fd8, #4fa8ff 45%, #bfe3ff);
     box-shadow: 0 0 40px rgba(0,0,0,0.5);
     max-width: 100%;
     max-height: 100%;
@@ -56,8 +56,38 @@
   #hud .label { opacity: 0.75; font-weight: 400; }
   #hud .val { font-weight: 700; color: #ffd54f; }
   #hearts { display: flex; gap: 3px; }
-  #hearts span { font-size: clamp(13px, 3vw, 17px); filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8)); }
+  #hearts span { font-size: clamp(13px, 3vw, 17px); filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8)); display: inline-block; }
   #hearts span.lost { opacity: 0.25; filter: none; }
+  #hearts.critical span:not(.lost) { animation: heartBeat 0.8s ease-in-out infinite; }
+  @keyframes heartBeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+  }
+  #vignette {
+    position: absolute; inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(255,0,0,0) 55%, rgba(255,0,0,0.55) 100%);
+    transition: opacity 0.3s ease;
+  }
+  #vignette.on { opacity: 1; animation: vignettePulse 1.1s ease-in-out infinite; }
+  @keyframes vignettePulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 0.9; }
+  }
+  #flash {
+    position: absolute; inset: 0;
+    z-index: 7;
+    pointer-events: none;
+    background: #fff;
+    opacity: 0;
+  }
+  #flash.hit { animation: flashHit 0.25s ease-out; }
+  @keyframes flashHit {
+    0% { opacity: 0.55; }
+    100% { opacity: 0; }
+  }
   #comboPop {
     position: absolute;
     left: 50%; top: 30%;
@@ -129,6 +159,22 @@
     padding: clamp(24px, 5vw, 40px) clamp(20px, 6vw, 48px);
     display: flex; flex-direction: column; align-items: center;
     box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    animation: cardIn 0.35s cubic-bezier(.2,.9,.3,1.2);
+  }
+  @keyframes cardIn {
+    0% { opacity: 0; transform: translateY(14px) scale(0.94); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  #titleIcon {
+    display: inline-block;
+    font-size: clamp(24px, 6vw, 38px);
+    margin-right: 6px;
+    animation: iconBob 2.2s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(25,118,210,0.8));
+  }
+  @keyframes iconBob {
+    0%, 100% { transform: translateY(0) rotate(-6deg); }
+    50% { transform: translateY(-6px) rotate(4deg); }
   }
   #statsRow { display: flex; gap: 24px; margin: 14px 0; font-size: clamp(14px, 3vw, 18px); }
   #statsRow b { color: #ffd54f; }
@@ -214,6 +260,8 @@
 <body>
 <div id="container">
   <canvas id="gameCanvas"></canvas>
+  <div id="vignette"></div>
+  <div id="flash"></div>
 
   <div id="hud">
     <div class="stat"><span class="label">Score</span><span class="val" id="score">0</span></div>
@@ -236,7 +284,7 @@
 
   <div id="overlay">
     <div id="overlayCard">
-      <h1 id="overlayTitle">Sky Fighter</h1>
+      <h1 id="overlayTitle"><span id="titleIcon">✈️</span>Sky Fighter</h1>
       <p id="overlaySub">Arrow keys / WASD to move, Space to shoot. On mobile: drag left side to fly, tap FIRE.</p>
       <p id="newBest" hidden>🏆 New Best Score!</p>
       <div id="statsRow" hidden>
@@ -271,6 +319,8 @@
   const heartsEl = document.getElementById('hearts');
   const comboPopEl = document.getElementById('comboPop');
   const newBestEl = document.getElementById('newBest');
+  const vignetteEl = document.getElementById('vignette');
+  const flashEl = document.getElementById('flash');
   const muteBtn = document.getElementById('muteBtn');
   const pauseBtn = document.getElementById('pauseBtn');
   const touchControls = document.getElementById('touchControls');
@@ -333,6 +383,14 @@
       html += `<span class="${i < count ? '' : 'lost'}">❤️</span>`;
     }
     heartsEl.innerHTML = html;
+    heartsEl.classList.toggle('critical', count === 1);
+    vignetteEl.classList.toggle('on', count === 1);
+  }
+
+  function flashHit() {
+    flashEl.classList.remove('hit');
+    void flashEl.offsetWidth;
+    flashEl.classList.add('hit');
   }
 
   let comboPopTimer = null;
@@ -478,18 +536,64 @@
     kills = 0;
   }
 
-  function drawPlane(x, y, w, h, color) {
+  function drawPlane(x, y, w, h, color, darkColor, flame) {
     ctx.save();
     ctx.translate(x, y);
+
+    if (flame) {
+      const grd = ctx.createLinearGradient(0, h / 3, 0, h / 3 + h * 0.6);
+      grd.addColorStop(0, 'rgba(255,200,60,0.9)');
+      grd.addColorStop(1, 'rgba(255,80,0,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.moveTo(-w / 8, h / 3);
+      ctx.lineTo(w / 8, h / 3);
+      ctx.lineTo(0, h / 3 + h * 0.6);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // wings (darker, wider, drawn first so body sits above)
+    ctx.fillStyle = darkColor;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, h / 3);
+    ctx.lineTo(-w / 6, 0);
+    ctx.lineTo(-w / 6, h / 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(w / 2, h / 3);
+    ctx.lineTo(w / 6, 0);
+    ctx.lineTo(w / 6, h / 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // fuselage
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(0, -h / 2);
-    ctx.lineTo(w / 2, h / 2);
     ctx.lineTo(w / 4, h / 3);
+    ctx.lineTo(w / 4.5, h / 2.1);
+    ctx.lineTo(-w / 4.5, h / 2.1);
     ctx.lineTo(-w / 4, h / 3);
-    ctx.lineTo(-w / 2, h / 2);
     ctx.closePath();
     ctx.fill();
+
+    // tail fin
+    ctx.fillStyle = darkColor;
+    ctx.beginPath();
+    ctx.moveTo(0, h / 3.2);
+    ctx.lineTo(w / 10, h / 1.9);
+    ctx.lineTo(-w / 10, h / 1.9);
+    ctx.closePath();
+    ctx.fill();
+
+    // cockpit
+    ctx.fillStyle = 'rgba(200,235,255,0.85)';
+    ctx.beginPath();
+    ctx.ellipse(0, -h / 8, w / 9, h / 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.restore();
   }
 
@@ -633,6 +737,7 @@
     renderHearts(Math.max(lives, 0), maxLives);
     sfx.hit();
     screenShake(10, 0.3);
+    flashHit();
     if (lives <= 0) endGame();
   }
 
@@ -672,6 +777,19 @@
   }
   pauseBtn.addEventListener('click', togglePause);
 
+  function drawClouds(speed, alpha, rx, ry) {
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    for (let i = 0; i < 6; i++) {
+      const cy = (frame * speed + i * 130) % (canvas.height + 60) - 30;
+      const cx = (80 + i * 160 + (speed * 37)) % canvas.width;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + rx * 0.7, cy + ry * 0.2, rx * 0.7, ry * 0.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx - rx * 0.7, cy + ry * 0.2, rx * 0.7, ry * 0.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -681,14 +799,16 @@
       ctx.translate(sx, sy);
     }
 
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    for (let i = 0; i < 6; i++) {
-      const cy = (frame * 1.2 + i * 130) % (canvas.height + 60) - 30;
-      const cx = (80 + i * 160) % canvas.width;
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, 30, 12, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // sun glow
+    const sunGrd = ctx.createRadialGradient(canvas.width * 0.8, 70, 5, canvas.width * 0.8, 70, 160);
+    sunGrd.addColorStop(0, 'rgba(255,255,220,0.55)');
+    sunGrd.addColorStop(1, 'rgba(255,255,220,0)');
+    ctx.fillStyle = sunGrd;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // parallax cloud layers (far, slow + near, fast)
+    drawClouds(0.5, 0.35, 26, 10);
+    drawClouds(1.2, 0.6, 36, 14);
 
     if (player.rapid > 0) {
       ctx.save();
@@ -699,29 +819,42 @@
       ctx.fill();
       ctx.restore();
     }
-    drawPlane(player.x, player.y, player.w, player.h, '#1976d2');
+    drawPlane(player.x, player.y, player.w, player.h, '#2196f3', '#1256a3', true);
 
+    ctx.save();
+    ctx.shadowColor = '#ffee58';
+    ctx.shadowBlur = 8;
     ctx.fillStyle = '#ffee58';
     bullets.forEach(b => ctx.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h));
+    ctx.restore();
 
+    ctx.save();
+    ctx.shadowColor = '#ff5252';
+    ctx.shadowBlur = 8;
     ctx.fillStyle = '#ff5252';
     enemyBullets.forEach(b => ctx.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h));
+    ctx.restore();
 
-    enemies.forEach(en => drawPlane(en.x, en.y, en.w, en.h, '#c62828'));
+    enemies.forEach(en => drawPlane(en.x, en.y, en.w, en.h, '#e53935', '#8e1f1a', false));
 
-    ctx.fillStyle = '#7CFC00';
     powerUps.forEach(p => {
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(frame * 0.1);
+      ctx.shadowColor = '#7CFC00';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = '#7CFC00';
       ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
       ctx.restore();
     });
 
     particles.forEach(p => {
-      ctx.globalAlpha = Math.max(p.life / p.maxLife, 0);
+      const t = Math.max(p.life / p.maxLife, 0);
+      ctx.globalAlpha = t;
       ctx.fillStyle = p.color;
-      ctx.fillRect(p.x, p.y, 4, 4);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3 * t + 1, 0, Math.PI * 2);
+      ctx.fill();
       ctx.globalAlpha = 1;
     });
     ctx.restore();
