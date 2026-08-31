@@ -181,7 +181,7 @@
     position: absolute;
     top: max(10px, env(safe-area-inset-top));
     right: max(10px, env(safe-area-inset-right));
-    z-index: 6;
+    z-index: 11;
     display: flex; gap: 8px;
   }
   .iconBtn {
@@ -339,6 +339,22 @@
     left: 28px; top: 28px;
   }
   [hidden] { display: none !important; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  .iconBtn.active { background: #1976d2; border-color: #64b5f6; }
+  body.reduced-motion #vignette.on,
+  body.reduced-motion #hearts.critical span:not(.lost),
+  body.reduced-motion #comboPop.show,
+  body.reduced-motion #stageBanner.show,
+  body.reduced-motion #overlayCard,
+  body.reduced-motion #titleIcon,
+  body.reduced-motion #flash.hit,
+  body.reduced-motion #flash.bomb {
+    animation: none !important;
+  }
 </style>
 </head>
 <body>
@@ -366,8 +382,11 @@
 
   <div id="topBar">
     <button id="muteBtn" class="iconBtn" title="Mute/unmute">🔊</button>
+    <button id="motionBtn" class="iconBtn" title="Toggle reduced motion (screen shake / flash / pulse)">🎆</button>
     <button id="pauseBtn" class="iconBtn" title="Pause">⏸</button>
   </div>
+
+  <div id="srLive" class="sr-only" role="status" aria-live="polite"></div>
 
   <div id="touchControls">
     <div id="moveZone"></div>
@@ -426,7 +445,9 @@
   const vignetteEl = document.getElementById('vignette');
   const flashEl = document.getElementById('flash');
   const muteBtn = document.getElementById('muteBtn');
+  const motionBtn = document.getElementById('motionBtn');
   const pauseBtn = document.getElementById('pauseBtn');
+  const srLive = document.getElementById('srLive');
   const touchControls = document.getElementById('touchControls');
   const moveZone = document.getElementById('moveZone');
   const joystickBase = document.getElementById('joystickBase');
@@ -441,6 +462,24 @@
   const STORAGE_BEST = 'skyfighter.bestScore';
   const STORAGE_MUTE = 'skyfighter.muted';
   const STORAGE_DIFF = 'skyfighter.difficulty';
+  const STORAGE_REDUCED = 'skyfighter.reducedMotion';
+
+  function announce(text) {
+    srLive.textContent = '';
+    window.setTimeout(() => { srLive.textContent = text; }, 30);
+  }
+
+  // ---------- Adaptive performance ----------
+  let quality = 0; // 0 = full, 1 = medium, 2 = low
+  const frameTimes = [];
+  function trackPerf(dt) {
+    frameTimes.push(dt);
+    if (frameTimes.length > 45) frameTimes.shift();
+    if (frameTimes.length < 45) return;
+    const avg = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+    if (avg > 1 / 40 && quality < 2) quality++;
+    else if (avg < 1 / 56 && quality > 0) quality--;
+  }
 
   const DIFFICULTIES = {
     easy:   { spawnBase: 75, spawnMin: 40, enemySpeed: 1.0, enemyShootChance: 0.45, lives: 4, bombs: 3, bossHpMul: 0.8 },
@@ -453,7 +492,10 @@
   const THEMES = [
     { sky: ['#0d2f5e', '#1e6fd8', '#7fc1ff'], cloud: '255,255,255', sun: '255,255,220', name: 'Daylight Front' },
     { sky: ['#3a0d5e', '#7d3c98', '#ffb199'], cloud: '255,222,240', sun: '255,190,140', name: 'Sunset Corridor' },
-    { sky: ['#020814', '#0d1b3a', '#2a4b7c'], cloud: '190,205,255', sun: '150,190,255', name: 'Night Approach' }
+    { sky: ['#020814', '#0d1b3a', '#2a4b7c'], cloud: '190,205,255', sun: '150,190,255', name: 'Night Approach' },
+    { sky: ['#10241e', '#274b3e', '#5c8f76'], cloud: '200,225,210', sun: '190,255,210', name: 'Storm Front' },
+    { sky: ['#0a1b33', '#31597a', '#bfe8ff'], cloud: '235,250,255', sun: '220,245,255', name: 'Arctic Wastes' },
+    { sky: ['#1a0503', '#5c1408', '#ff7a3d'], cloud: '255,200,170', sun: '255,150,90', name: 'Volcanic Ridge' }
   ];
 
   const ENEMY_TYPES = {
@@ -463,17 +505,38 @@
   };
 
   const BOSSES = [
-    { name: 'VANGUARD', hullTop: '#8e24aa', hullBottom: '#4a148c', wing: '#4a148c', core: '#ff6ec7', hpMul: 1.0 },
-    { name: 'BEHEMOTH', hullTop: '#ff8f00', hullBottom: '#bf360c', wing: '#bf360c', core: '#ffd54f', hpMul: 1.35 },
-    { name: 'SPECTER',  hullTop: '#26a69a', hullBottom: '#00695c', wing: '#00695c', core: '#80deea', hpMul: 0.8 }
+    { name: 'VANGUARD',   hullTop: '#8e24aa', hullBottom: '#4a148c', wing: '#4a148c', core: '#ff6ec7', hpMul: 1.0 },
+    { name: 'BEHEMOTH',   hullTop: '#ff8f00', hullBottom: '#bf360c', wing: '#bf360c', core: '#ffd54f', hpMul: 1.35 },
+    { name: 'SPECTER',    hullTop: '#26a69a', hullBottom: '#00695c', wing: '#00695c', core: '#80deea', hpMul: 0.8 },
+    { name: 'DREADNOUGHT',hullTop: '#78909c', hullBottom: '#37474f', wing: '#263238', core: '#eceff1', hpMul: 1.55 },
+    { name: 'WRAITH',     hullTop: '#4527a0', hullBottom: '#1a0033', wing: '#1a0033', core: '#b388ff', hpMul: 0.95 },
+    { name: 'TITAN',      hullTop: '#ffca28', hullBottom: '#e65100', wing: '#e65100', core: '#fff59d', hpMul: 1.7 }
   ];
 
   let bestScore = Number(localStorage.getItem(STORAGE_BEST)) || 0;
   let muted = localStorage.getItem(STORAGE_MUTE) === '1';
   let difficulty = localStorage.getItem(STORAGE_DIFF) || 'normal';
+  const reducedMotionPreferred = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let reducedMotion = localStorage.getItem(STORAGE_REDUCED) !== null
+    ? localStorage.getItem(STORAGE_REDUCED) === '1'
+    : reducedMotionPreferred;
   bestEl.textContent = bestScore;
   updateMuteBtn();
+  updateMotionBtn();
   setDifficulty(difficulty);
+
+  function updateMotionBtn() {
+    document.body.classList.toggle('reduced-motion', reducedMotion);
+    motionBtn.classList.toggle('active', reducedMotion);
+    motionBtn.textContent = reducedMotion ? '🚫' : '🎆';
+    motionBtn.title = reducedMotion ? 'Reduced motion ON — click to enable effects' : 'Reduced motion OFF — click to reduce shake/flash';
+  }
+  motionBtn.addEventListener('click', () => {
+    reducedMotion = !reducedMotion;
+    localStorage.setItem(STORAGE_REDUCED, reducedMotion ? '1' : '0');
+    updateMotionBtn();
+    announce(reducedMotion ? 'Reduced motion enabled' : 'Reduced motion disabled');
+  });
 
   // ---------- Audio (WebAudio synth, no external assets) ----------
   let audioCtx = null;
@@ -515,13 +578,25 @@
     shoot: () => beep(880, 0.06, 'square', 0.04),
     laser: () => beep(1400, 0.05, 'sawtooth', 0.035),
     explode: () => beep(120, 0.25, 'sawtooth', 0.12),
+    explodeGrunt: () => beep(140, 0.2, 'sawtooth', 0.11),
+    explodeInterceptor: () => { beep(420, 0.1, 'square', 0.08); beep(700, 0.08, 'square', 0.05); },
+    explodeTank: () => { noiseBurst(0.3, 0.15); beep(70, 0.35, 'sawtooth', 0.16); },
     hit: () => beep(200, 0.3, 'triangle', 0.15),
     bomb: () => { noiseBurst(0.6, 0.3); beep(80, 0.5, 'sawtooth', 0.2); },
     powerup: () => beep(660, 0.15, 'sine', 0.1),
     bossHit: () => beep(160, 0.08, 'square', 0.06),
-    bossDown: () => { beep(400, 0.3, 'sawtooth', 0.18); setTimeout(() => beep(250, 0.3, 'sawtooth', 0.18), 180); setTimeout(() => beep(150, 0.5, 'sawtooth', 0.18), 360); },
+    bossTelegraph: () => beep(500, 0.18, 'sine', 0.06),
+    bossDown: () => {
+      [400, 320, 250, 190, 150].forEach((f, i) => setTimeout(() => beep(f, 0.28, 'sawtooth', 0.18), i * 150));
+    },
+    stageClear: () => {
+      [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.18, 'triangle', 0.09), i * 90));
+    },
+    uiClick: () => beep(720, 0.05, 'square', 0.04),
     gameover: () => { beep(300, 0.2, 'sawtooth', 0.15); setTimeout(() => beep(150, 0.4, 'sawtooth', 0.15), 150); }
   };
+
+  const EXPLODE_SFX = { grunt: 'explodeGrunt', interceptor: 'explodeInterceptor', tank: 'explodeTank' };
 
   function renderHearts(count, max) {
     let html = '';
@@ -542,11 +617,13 @@
   }
 
   function flashHit() {
+    if (reducedMotion) return;
     flashEl.classList.remove('hit');
     void flashEl.offsetWidth;
     flashEl.classList.add('hit');
   }
   function flashBomb() {
+    if (reducedMotion) return;
     flashEl.classList.remove('bomb');
     void flashEl.offsetWidth;
     flashEl.classList.add('bomb');
@@ -569,8 +646,8 @@
 
   let shakeTime = 0, shakeMag = 0;
   function screenShake(mag, dur) {
-    shakeMag = mag;
-    shakeTime = dur;
+    shakeMag = reducedMotion ? mag * 0.15 : mag;
+    shakeTime = reducedMotion ? Math.min(dur, 0.1) : dur;
   }
 
   function updateMuteBtn() {
@@ -590,6 +667,7 @@
   diffButtons.forEach(b => b.addEventListener('click', () => {
     if (running && !paused) return;
     setDifficulty(b.dataset.diff);
+    sfx.uiClick();
   }));
 
   // ---------- Canvas sizing ----------
@@ -815,7 +893,7 @@
     ctx.fillStyle = telegraphing ? '#ffffff' : design.core;
     ctx.globalAlpha = telegraphing ? 0.6 + Math.sin(frame * 0.6) * 0.4 : 0.85;
     ctx.shadowColor = design.core;
-    ctx.shadowBlur = telegraphing ? 22 : 8;
+    ctx.shadowBlur = quality === 0 ? (telegraphing ? 22 : 8) : (telegraphing ? 10 : 0);
     ctx.beginPath();
     ctx.ellipse(0, -h * 0.08, w / 7, h / 6, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -887,7 +965,8 @@
   }
 
   function spawnExplosion(x, y, color, count) {
-    for (let i = 0; i < (count || 14); i++) {
+    const n = Math.max(3, Math.round((count || 14) * (quality === 0 ? 1 : quality === 1 ? 0.6 : 0.35)));
+    for (let i = 0; i < n; i++) {
       particles.push({
         x, y,
         vx: (Math.random() - 0.5) * 200,
@@ -1049,7 +1128,7 @@
             maybeSpawnPowerUp(en.x, en.y);
             enemies.splice(i, 1);
             addScore(en.score);
-            sfx.explode();
+            sfx[EXPLODE_SFX[en.type]] ? sfx[EXPLODE_SFX[en.type]]() : sfx.explode();
             kills++;
             stageKills++;
             if (kills > 0 && kills % 10 === 0) showComboPop(kills + ' KILLS!');
@@ -1158,6 +1237,23 @@
       enemyBullets.push({ x: b.x, y: b.y, w: 6, h: 6, radial: true, dx: Math.cos(ang) * speed, dy: Math.sin(ang) * speed });
     }
   }
+  function fireCross(b, speed) {
+    [0, Math.PI / 2, Math.PI, Math.PI * 1.5, Math.PI / 4, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75].forEach(ang => {
+      enemyBullets.push({ x: b.x, y: b.y, w: 6, h: 6, radial: true, dx: Math.cos(ang) * speed, dy: Math.sin(ang) * speed });
+    });
+  }
+  function fireHomingSeeded(b, count, speed) {
+    for (let a = 0; a < count; a++) {
+      const dx = (player.x - b.x) + (Math.random() - 0.5) * 120;
+      const dy = (player.y - b.y) + (Math.random() - 0.5) * 60;
+      const dist = Math.hypot(dx, dy) || 1;
+      enemyBullets.push({ x: b.x + (a - count / 2) * 18, y: b.y, w: 7, h: 7, radial: true, dx: dx / dist * speed, dy: dy / dist * speed });
+    }
+  }
+  function fireDoubleRing(b, speedA, speedB) {
+    fireRadial(b, 10, speedA);
+    fireRadial(b, 10, speedB, Math.PI / 10);
+  }
 
   const BOSS_PATTERNS = [
     // VANGUARD: radial burst, aimed fan, wide V-fan
@@ -1177,6 +1273,24 @@
       b => { b.x = 60 + Math.random() * (canvas.width - 120); fireRadial(b, 10, 170); },
       b => fireSpiralBurst(b, 190),
       b => { fireAimedSpread(b, 2, 300, 0.08); fireAimedSpread(b, 2, 300, 0.3); }
+    ],
+    // DREADNOUGHT: 8-way cross fire + homing missile volley + dense radial wall
+    [
+      b => fireCross(b, 180),
+      b => fireHomingSeeded(b, 5, 230),
+      b => fireRadial(b, 24, 140)
+    ],
+    // WRAITH: teleport barrage + expanding double ring + aimed cross-spread
+    [
+      b => { b.x = 60 + Math.random() * (canvas.width - 120); fireCross(b, 160); },
+      b => fireDoubleRing(b, 130, 220),
+      b => { fireAimedSpread(b, 3, 260, 0.2); fireAimedSpread(b, 3, 260, -0.2); }
+    ],
+    // TITAN: heavy columns + full ring + relentless homing volley
+    [
+      b => fireColumns(b, 190),
+      b => fireRadial(b, 26, 160),
+      b => fireHomingSeeded(b, 7, 210)
     ]
   ];
 
@@ -1202,7 +1316,7 @@
       }
     } else {
       b.attackTimer -= dt * 60;
-      if (b.attackTimer <= 0) b.telegraph = 22;
+      if (b.attackTimer <= 0) { b.telegraph = 22; sfx.bossTelegraph(); }
     }
 
     enemyBullets.forEach(eb => {
@@ -1214,6 +1328,7 @@
     spawnExplosion(boss.x, boss.y, '#ff66cc', 40);
     screenShake(18, 0.5);
     sfx.bossDown();
+    setTimeout(() => sfx.stageClear(), 500);
     addScore(500);
     bossBarWrap.classList.remove('show');
     boss = null;
@@ -1221,6 +1336,7 @@
     stageKills = 0;
     bossWarned = false;
     showStageBanner('STAGE ' + stage);
+    announce('Boss defeated. Entering stage ' + stage + ': ' + THEMES[(stage - 1) % THEMES.length].name);
   }
 
   function loseLife() {
@@ -1233,6 +1349,7 @@
     screenShake(10, 0.3);
     flashHit();
     if (lives <= 0) endGame();
+    else announce(lives + ' lives remaining');
   }
 
   function endGame() {
@@ -1254,6 +1371,7 @@
     finalBestEl.textContent = bestScore;
     startBtn.textContent = 'Play Again';
     overlay.hidden = false;
+    announce('Game over. Final score ' + score + '. Reached stage ' + stage + (isNewBest ? '. New best score!' : '.'));
   }
 
   function togglePause() {
@@ -1270,7 +1388,7 @@
       overlay.hidden = true;
     }
   }
-  pauseBtn.addEventListener('click', togglePause);
+  pauseBtn.addEventListener('click', () => { sfx.uiClick(); togglePause(); });
 
   function drawClouds(speed, fillColor, rx, ry) {
     ctx.fillStyle = fillColor;
@@ -1326,15 +1444,14 @@
       drawPlane(player.x, player.y, player.w, player.h, '#2196f3', '#1256a3', true);
     }
 
+    const glow = quality === 0;
     ctx.save();
     bullets.forEach(b => {
       if (b.laser) {
-        ctx.shadowColor = '#40c4ff';
-        ctx.shadowBlur = 10;
+        if (glow) { ctx.shadowColor = '#40c4ff'; ctx.shadowBlur = 10; }
         ctx.fillStyle = '#b3e5fc';
       } else {
-        ctx.shadowColor = '#ffee58';
-        ctx.shadowBlur = 8;
+        if (glow) { ctx.shadowColor = '#ffee58'; ctx.shadowBlur = 8; }
         ctx.fillStyle = '#ffee58';
       }
       ctx.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h);
@@ -1342,8 +1459,7 @@
     ctx.restore();
 
     ctx.save();
-    ctx.shadowColor = '#ff5252';
-    ctx.shadowBlur = 8;
+    if (glow) { ctx.shadowColor = '#ff5252'; ctx.shadowBlur = 8; }
     ctx.fillStyle = '#ff5252';
     enemyBullets.forEach(b => {
       ctx.beginPath();
@@ -1371,8 +1487,7 @@
       ctx.translate(p.x, p.y);
       ctx.rotate(frame * 0.1);
       const color = p.type === 'life' ? '#ff5252' : p.type === 'bomb' ? '#ffc107' : '#7CFC00';
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 10;
+      if (glow) { ctx.shadowColor = color; ctx.shadowBlur = 10; }
       ctx.fillStyle = color;
       ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
       ctx.restore();
@@ -1396,6 +1511,7 @@
     lastTime = now;
     dt = Math.min(dt, 0.05);
 
+    trackPerf(dt);
     if (running && !paused) {
       update(dt);
       if (shakeTime > 0) shakeTime -= dt;
