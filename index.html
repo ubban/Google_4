@@ -349,32 +349,85 @@
 
   // ---------- Audio (WebAudio synth, no external assets) ----------
   let audioCtx = null;
+  let noiseBuffer = null;
   function ensureAudio() {
     if (!audioCtx) {
       try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
       catch (e) { audioCtx = null; }
     }
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioCtx && !noiseBuffer) noiseBuffer = makeNoiseBuffer();
   }
-  function beep(freq, dur, type, vol) {
+  function makeNoiseBuffer() {
+    const len = audioCtx.sampleRate * 1;
+    const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    return buf;
+  }
+  // A short tone with a quick attack (avoids clicks) and exponential decay.
+  function beep(freq, dur, type, vol, opts) {
     if (muted || !audioCtx) return;
+    opts = opts || {};
+    const now = audioCtx.currentTime;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = type || 'square';
-    osc.frequency.value = freq;
-    gain.gain.value = vol || 0.08;
-    osc.connect(gain).connect(audioCtx.destination);
-    const now = audioCtx.currentTime;
-    gain.gain.setValueAtTime(gain.gain.value, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    osc.frequency.setValueAtTime(freq, now);
+    if (opts.sweepTo) osc.frequency.exponentialRampToValueAtTime(opts.sweepTo, now + dur);
+    const peak = vol || 0.08;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(peak, now + (opts.attack || 0.005));
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    let node = osc;
+    if (opts.filterFreq) {
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(opts.filterFreq, now);
+      if (opts.filterSweepTo) filter.frequency.exponentialRampToValueAtTime(opts.filterSweepTo, now + dur);
+      osc.connect(filter);
+      node = filter;
+    }
+    node.connect(gain).connect(audioCtx.destination);
     osc.start(now);
-    osc.stop(now + dur);
+    osc.stop(now + dur + 0.02);
+  }
+  // A filtered white-noise burst, used for explosions/impacts.
+  function noiseBurst(dur, vol, filterFreq, filterSweepTo) {
+    if (muted || !audioCtx || !noiseBuffer) return;
+    const now = audioCtx.currentTime;
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(filterFreq || 2000, now);
+    if (filterSweepTo) filter.frequency.exponentialRampToValueAtTime(filterSweepTo, now + dur);
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(vol || 0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    src.connect(filter).connect(gain).connect(audioCtx.destination);
+    src.start(now);
+    src.stop(now + dur + 0.02);
   }
   const sfx = {
-    shoot: () => beep(880, 0.08, 'square', 0.05),
-    explode: () => beep(120, 0.25, 'sawtooth', 0.12),
-    hit: () => beep(200, 0.3, 'triangle', 0.15),
-    gameover: () => { beep(300, 0.2, 'sawtooth', 0.15); setTimeout(() => beep(150, 0.4, 'sawtooth', 0.15), 150); }
+    shoot: () => beep(920, 0.09, 'square', 0.045, { sweepTo: 1400, attack: 0.002 }),
+    explode: () => {
+      noiseBurst(0.35, 0.2, 2200, 120);
+      beep(90, 0.3, 'sawtooth', 0.1, { sweepTo: 35, attack: 0.002 });
+    },
+    hit: () => {
+      noiseBurst(0.18, 0.12, 1400, 300);
+      beep(220, 0.2, 'triangle', 0.1, { sweepTo: 90, attack: 0.002 });
+    },
+    powerup: () => {
+      beep(523.25, 0.1, 'sine', 0.09, { attack: 0.005 });
+      setTimeout(() => beep(783.99, 0.16, 'sine', 0.09, { attack: 0.005 }), 90);
+    },
+    gameover: () => {
+      beep(392, 0.2, 'sawtooth', 0.12, { attack: 0.004 });
+      setTimeout(() => beep(293.66, 0.22, 'sawtooth', 0.12, { attack: 0.004 }), 160);
+      setTimeout(() => beep(196, 0.45, 'sawtooth', 0.13, { sweepTo: 130, attack: 0.004 }), 340);
+    }
   };
 
   function renderHearts(count, max) {
@@ -723,7 +776,7 @@
       if (rectsOverlap(powerUps[i], player)) {
         player.rapid = 6;
         powerUps.splice(i, 1);
-        beep(660, 0.15, 'sine', 0.1);
+        sfx.powerup();
       }
     }
 
