@@ -450,6 +450,24 @@
 
   const KILLS_PER_STAGE = 18;
 
+  const THEMES = [
+    { sky: ['#0d2f5e', '#1e6fd8', '#7fc1ff'], cloud: '255,255,255', sun: '255,255,220', name: 'Daylight Front' },
+    { sky: ['#3a0d5e', '#7d3c98', '#ffb199'], cloud: '255,222,240', sun: '255,190,140', name: 'Sunset Corridor' },
+    { sky: ['#020814', '#0d1b3a', '#2a4b7c'], cloud: '190,205,255', sun: '150,190,255', name: 'Night Approach' }
+  ];
+
+  const ENEMY_TYPES = {
+    grunt:       { w: 34, h: 34, hp: 1, speedMul: 1,    color: '#e53935', dark: '#8e1f1a', score: 10, minStage: 1 },
+    interceptor: { w: 26, h: 26, hp: 1, speedMul: 1.7,  color: '#ff7043', dark: '#bf360c', score: 15, minStage: 1, weave: true },
+    tank:        { w: 46, h: 46, hp: 4, speedMul: 0.55, color: '#5e35b1', dark: '#2a1458', score: 35, minStage: 2 }
+  };
+
+  const BOSSES = [
+    { name: 'VANGUARD', hullTop: '#8e24aa', hullBottom: '#4a148c', wing: '#4a148c', core: '#ff6ec7', hpMul: 1.0 },
+    { name: 'BEHEMOTH', hullTop: '#ff8f00', hullBottom: '#bf360c', wing: '#bf360c', core: '#ffd54f', hpMul: 1.35 },
+    { name: 'SPECTER',  hullTop: '#26a69a', hullBottom: '#00695c', wing: '#00695c', core: '#80deea', hpMul: 0.8 }
+  ];
+
   let bestScore = Number(localStorage.getItem(STORAGE_BEST)) || 0;
   let muted = localStorage.getItem(STORAGE_MUTE) === '1';
   let difficulty = localStorage.getItem(STORAGE_DIFF) || 'normal';
@@ -770,7 +788,8 @@
     ctx.translate(b.x, b.y);
     const w = b.w, h = b.h;
     const t = frame * 0.15;
-    ctx.fillStyle = '#4a148c';
+    const design = b.design || BOSSES[0];
+    ctx.fillStyle = design.wing;
     ctx.beginPath();
     ctx.moveTo(-w / 2, 0);
     ctx.lineTo(-w / 2.6, -h / 3);
@@ -785,17 +804,23 @@
     ctx.fill();
 
     const grd = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
-    grd.addColorStop(0, '#8e24aa');
-    grd.addColorStop(1, '#4a148c');
+    grd.addColorStop(0, design.hullTop);
+    grd.addColorStop(1, design.hullBottom);
     ctx.fillStyle = grd;
     ctx.beginPath();
     ctx.ellipse(0, 0, w / 2.4, h / 2.1, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(255,110,180,0.85)';
+    const telegraphing = b.telegraph > 0;
+    ctx.fillStyle = telegraphing ? '#ffffff' : design.core;
+    ctx.globalAlpha = telegraphing ? 0.6 + Math.sin(frame * 0.6) * 0.4 : 0.85;
+    ctx.shadowColor = design.core;
+    ctx.shadowBlur = telegraphing ? 22 : 8;
     ctx.beginPath();
     ctx.ellipse(0, -h * 0.08, w / 7, h / 6, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
 
     for (let i = -1; i <= 1; i += 2) {
       ctx.save();
@@ -814,27 +839,36 @@
     const d = DIFFICULTIES[difficulty];
     const x = 30 + Math.random() * (canvas.width - 60);
     const patternRoll = Math.random();
+    const choices = Object.keys(ENEMY_TYPES).filter(k => ENEMY_TYPES[k].minStage <= stage);
+    let typeKey = 'grunt';
+    const r = Math.random();
+    if (choices.includes('tank') && r < 0.15) typeKey = 'tank';
+    else if (choices.includes('interceptor') && r < 0.4) typeKey = 'interceptor';
+    const type = ENEMY_TYPES[typeKey];
     enemies.push({
-      x, y: -30, w: 34, h: 34,
-      speed: d.enemySpeed + Math.random() * 1.2,
+      x, y: -30, w: type.w, h: type.h,
+      speed: (d.enemySpeed + Math.random() * 1.2) * type.speedMul,
       shootTimer: Math.floor(Math.random() * 60) + 30,
       canShoot: Math.random() < d.enemyShootChance,
-      pattern: patternRoll < 0.15 ? 'spread' : 'aimed'
+      pattern: patternRoll < 0.15 ? 'spread' : 'aimed',
+      type: typeKey, hp: type.hp, color: type.color, dark: type.dark, score: type.score,
+      weave: !!type.weave, weaveSeed: Math.random() * 10, baseX: x
     });
   }
 
   function spawnBoss() {
     const d = DIFFICULTIES[difficulty];
-    const baseHp = 60 + stage * 30;
+    const design = BOSSES[(stage - 1) % BOSSES.length];
+    const baseHp = 70 + stage * 35;
     boss = {
       x: canvas.width / 2, y: -80, w: 90, h: 80,
-      hp: Math.round(baseHp * d.bossHpMul), maxHp: Math.round(baseHp * d.bossHpMul),
+      hp: Math.round(baseHp * d.bossHpMul * design.hpMul), maxHp: Math.round(baseHp * d.bossHpMul * design.hpMul),
       entering: true, phaseTimer: 0, attackTimer: 90, patternIndex: 0,
-      vx: 1
+      vx: 1, design, telegraph: 0
     };
-    bossNameEl.textContent = 'STAGE ' + stage + ' BOSS';
+    bossNameEl.textContent = 'STAGE ' + stage + ' — ' + design.name;
     bossBarWrap.classList.add('show');
-    showStageBanner('WARNING — BOSS APPROACHING');
+    showStageBanner('WARNING — ' + design.name + ' APPROACHING');
   }
 
   function maybeSpawnPowerUp(x, y) {
@@ -982,6 +1016,10 @@
 
     enemies.forEach(en => {
       en.y += en.speed * dt * 60;
+      if (en.weave) {
+        en.x = en.baseX + Math.sin((frame * 0.05) + en.weaveSeed) * 60;
+        en.x = Math.max(en.w / 2, Math.min(canvas.width - en.w / 2, en.x));
+      }
       en.shootTimer -= dt * 60;
       if (en.canShoot && en.shootTimer <= 0) {
         if (en.pattern === 'spread') {
@@ -1003,15 +1041,19 @@
       for (let j = bullets.length - 1; j >= 0; j--) {
         const b = bullets[j];
         if (rectsOverlap(en, b)) {
-          spawnExplosion(en.x, en.y, '#ff8800');
-          maybeSpawnPowerUp(en.x, en.y);
-          enemies.splice(i, 1);
+          en.hp--;
+          spawnExplosion(b.x, b.y, '#ffcc80', 4);
           if (!b.laser || b.pierce <= 0) { bullets.splice(j, 1); } else { b.pierce--; }
-          addScore(10);
-          sfx.explode();
-          kills++;
-          stageKills++;
-          if (kills > 0 && kills % 10 === 0) showComboPop(kills + ' KILLS!');
+          if (en.hp <= 0) {
+            spawnExplosion(en.x, en.y, '#ff8800', en.type === 'tank' ? 22 : 14);
+            maybeSpawnPowerUp(en.x, en.y);
+            enemies.splice(i, 1);
+            addScore(en.score);
+            sfx.explode();
+            kills++;
+            stageKills++;
+            if (kills > 0 && kills % 10 === 0) showComboPop(kills + ' KILLS!');
+          }
           break;
         }
       }
@@ -1086,6 +1128,58 @@
     sfx.powerup();
   }
 
+  function fireRadial(b, count, speed, offset) {
+    for (let a = 0; a < count; a++) {
+      const ang = (a / count) * Math.PI * 2 + (offset || 0);
+      enemyBullets.push({ x: b.x, y: b.y, w: 6, h: 6, radial: true, dx: Math.cos(ang) * speed, dy: Math.sin(ang) * speed });
+    }
+  }
+  function fireAimedSpread(b, count, speed, spreadStep) {
+    const dx = player.x - b.x, dy = player.y - b.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const ndx = dx / dist, ndy = dy / dist;
+    const half = (count - 1) / 2;
+    for (let a = 0; a < count; a++) {
+      const spread = (a - half) * spreadStep;
+      const cos = Math.cos(spread), sin = Math.sin(spread);
+      const rx = ndx * cos - ndy * sin, ry = ndx * sin + ndy * cos;
+      enemyBullets.push({ x: b.x, y: b.y, w: 6, h: 6, radial: true, dx: rx * speed, dy: ry * speed });
+    }
+  }
+  function fireColumns(b, speed) {
+    for (let i = -2; i <= 2; i++) {
+      enemyBullets.push({ x: b.x + i * 26, y: b.y, w: 6, h: 16, radial: true, dx: 0, dy: speed });
+    }
+  }
+  function fireSpiralBurst(b, speed) {
+    const base = (b.patternIndex * 0.6) % (Math.PI * 2);
+    for (let a = 0; a < 8; a++) {
+      const ang = base + (a / 8) * Math.PI * 2;
+      enemyBullets.push({ x: b.x, y: b.y, w: 6, h: 6, radial: true, dx: Math.cos(ang) * speed, dy: Math.sin(ang) * speed });
+    }
+  }
+
+  const BOSS_PATTERNS = [
+    // VANGUARD: radial burst, aimed fan, wide V-fan
+    [
+      b => fireRadial(b, 14, 150),
+      b => fireAimedSpread(b, 5, 260, 0.14),
+      b => { for (let i = -1; i <= 1; i += 2) for (let a = 0; a < 5; a++) enemyBullets.push({ x: b.x + i * b.w * 0.3, y: b.y, w: 6, h: 6, radial: true, dx: Math.cos(Math.PI / 2 + i * 0.5 + a * 0.12 * i) * 200, dy: Math.sin(Math.PI / 2 + i * 0.5 + a * 0.12 * i) * 200 }); }
+    ],
+    // BEHEMOTH: heavy straight columns + slow homing spread + dense radial wall
+    [
+      b => fireColumns(b, 210),
+      b => fireAimedSpread(b, 7, 200, 0.1),
+      b => fireRadial(b, 20, 130)
+    ],
+    // SPECTER: teleport dash + tight spiral + double aimed shots
+    [
+      b => { b.x = 60 + Math.random() * (canvas.width - 120); fireRadial(b, 10, 170); },
+      b => fireSpiralBurst(b, 190),
+      b => { fireAimedSpread(b, 2, 300, 0.08); fireAimedSpread(b, 2, 300, 0.3); }
+    ]
+  ];
+
   function updateBoss(dt) {
     const b = boss;
     if (b.entering) {
@@ -1096,35 +1190,21 @@
     b.x += b.vx * 55 * dt;
     if (b.x < b.w / 2 + 10 || b.x > canvas.width - b.w / 2 - 10) b.vx *= -1;
 
-    b.attackTimer -= dt * 60;
-    if (b.attackTimer <= 0) {
-      const pattern = b.patternIndex % 3;
-      if (pattern === 0) {
-        for (let a = 0; a < 12; a++) {
-          const ang = (a / 12) * Math.PI * 2;
-          enemyBullets.push({ x: b.x, y: b.y, w: 6, h: 6, speed: 0, vx: Math.cos(ang) * 150, vy0: true, radial: true, dx: Math.cos(ang) * 150, dy: Math.sin(ang) * 150 });
-        }
-      } else if (pattern === 1) {
-        const dx = player.x - b.x, dy = player.y - b.y;
-        const dist = Math.hypot(dx, dy) || 1;
-        for (let a = -2; a <= 2; a++) {
-          const spread = a * 0.14;
-          const ndx = dx / dist, ndy = dy / dist;
-          const cos = Math.cos(spread), sin = Math.sin(spread);
-          const rx = ndx * cos - ndy * sin, ry = ndx * sin + ndy * cos;
-          enemyBullets.push({ x: b.x, y: b.y, w: 6, h: 6, speed: 260, vx: rx * 260, radial: true, dx: rx * 260, dy: ry * 260 });
-        }
-      } else {
-        for (let i = -1; i <= 1; i += 2) {
-          for (let a = 0; a < 5; a++) {
-            const ang = Math.PI / 2 + i * 0.5 + a * 0.12 * i;
-            enemyBullets.push({ x: b.x + i * b.w * 0.3, y: b.y, w: 6, h: 6, speed: 0, radial: true, dx: Math.cos(ang) * 200, dy: Math.sin(ang) * 200 });
-          }
-        }
+    if (b.telegraph > 0) {
+      b.telegraph -= dt * 60;
+      if (b.telegraph <= 0) {
+        const designIndex = BOSSES.indexOf(b.design);
+        const patterns = BOSS_PATTERNS[designIndex] || BOSS_PATTERNS[0];
+        const pattern = patterns[b.patternIndex % patterns.length];
+        pattern(b);
+        b.patternIndex++;
+        b.attackTimer = 85;
       }
-      b.patternIndex++;
-      b.attackTimer = 85;
+    } else {
+      b.attackTimer -= dt * 60;
+      if (b.attackTimer <= 0) b.telegraph = 22;
     }
+
     enemyBullets.forEach(eb => {
       if (eb.radial) { eb.x += eb.dx * dt; eb.y += eb.dy * dt; }
     });
@@ -1192,8 +1272,8 @@
   }
   pauseBtn.addEventListener('click', togglePause);
 
-  function drawClouds(speed, alpha, rx, ry) {
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+  function drawClouds(speed, fillColor, rx, ry) {
+    ctx.fillStyle = fillColor;
     for (let i = 0; i < 6; i++) {
       const cy = (frame * speed + i * 130) % (canvas.height + 60) - 30;
       const cx = (80 + i * 160 + (speed * 37)) % canvas.width;
@@ -1214,14 +1294,22 @@
       ctx.translate(sx, sy);
     }
 
+    const theme = THEMES[(stage - 1) % THEMES.length];
+    const skyGrd = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    skyGrd.addColorStop(0, theme.sky[0]);
+    skyGrd.addColorStop(0.45, theme.sky[1]);
+    skyGrd.addColorStop(1, theme.sky[2]);
+    ctx.fillStyle = skyGrd;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     const sunGrd = ctx.createRadialGradient(canvas.width * 0.8, 70, 5, canvas.width * 0.8, 70, 160);
-    sunGrd.addColorStop(0, 'rgba(255,255,220,0.55)');
-    sunGrd.addColorStop(1, 'rgba(255,255,220,0)');
+    sunGrd.addColorStop(0, `rgba(${theme.sun},0.55)`);
+    sunGrd.addColorStop(1, `rgba(${theme.sun},0)`);
     ctx.fillStyle = sunGrd;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    drawClouds(0.5, 0.35, 26, 10);
-    drawClouds(1.2, 0.6, 36, 14);
+    drawClouds(0.5, `rgba(${theme.cloud},0.35)`, 26, 10);
+    drawClouds(1.2, `rgba(${theme.cloud},0.6)`, 36, 14);
 
     if (player.invuln > 0 && Math.floor(frame / 4) % 2 === 0) {
       // blink while invulnerable
@@ -1264,7 +1352,17 @@
     });
     ctx.restore();
 
-    enemies.forEach(en => drawPlane(en.x, en.y, en.w, en.h, '#e53935', '#8e1f1a', false));
+    enemies.forEach(en => {
+      drawPlane(en.x, en.y, en.w, en.h, en.color, en.dark, false);
+      if (en.type === 'tank') {
+        const type = ENEMY_TYPES.tank;
+        const pct = Math.max(0, en.hp / type.hp);
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(en.x - en.w / 2, en.y - en.h / 2 - 8, en.w, 4);
+        ctx.fillStyle = '#ff5252';
+        ctx.fillRect(en.x - en.w / 2, en.y - en.h / 2 - 8, en.w * pct, 4);
+      }
+    });
 
     if (boss) drawBossShip(boss);
 
