@@ -1162,11 +1162,8 @@
       player.x += mvx * player.speed * dt;
       player.y += mvy * player.speed * dt;
     } else if (mouseActive) {
-      const dx = mouseTarget.x - player.x, dy = mouseTarget.y - player.y;
-      const dist = Math.hypot(dx, dy);
-      const maxStep = player.speed * 1.7 * dt;
-      if (dist <= maxStep) { player.x = mouseTarget.x; player.y = mouseTarget.y; }
-      else { player.x += (dx / dist) * maxStep; player.y += (dy / dist) * maxStep; }
+      player.x = mouseTarget.x;
+      player.y = mouseTarget.y;
     }
     player.x = Math.max(player.w / 2, Math.min(canvas.width - player.w / 2, player.x));
     player.y = Math.max(player.h / 2, Math.min(canvas.height - player.h / 2, player.y));
