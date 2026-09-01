@@ -54,7 +54,13 @@
     backdrop-filter: blur(4px);
   }
   #hud .label { opacity: 0.75; font-weight: 400; }
-  #hud .val { font-weight: 700; color: #ffd54f; }
+  #hud .val { font-weight: 700; color: #ffd54f; display: inline-block; transition: transform 0.15s ease; }
+  #hud .val.bump { animation: scoreBump 0.25s ease; }
+  @keyframes scoreBump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); color: #fff176; }
+    100% { transform: scale(1); }
+  }
   #hearts { display: flex; gap: 3px; }
   #hearts span { font-size: clamp(13px, 3vw, 17px); filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8)); display: inline-block; }
   #hearts span.lost { opacity: 0.25; filter: none; }
@@ -129,6 +135,10 @@
     line-height: 1;
   }
   .iconBtn:active { background: rgba(255,255,255,0.25); }
+  @media (hover: hover) {
+    .iconBtn:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); transform: scale(1.06); }
+  }
+  .iconBtn { transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease; }
   #overlay {
     position: absolute;
     inset: 0;
@@ -199,18 +209,33 @@
     transition: transform 0.1s ease, box-shadow 0.1s ease;
   }
   #startBtn:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(255,204,0,0.4); }
+  @media (hover: hover) {
+    #startBtn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255,204,0,0.6), inset 0 1px 0 rgba(255,255,255,0.6); }
+  }
+  #footerHint {
+    margin-top: 16px;
+    font-size: clamp(11px, 2.6vw, 13px);
+    opacity: 0.55;
+    letter-spacing: 0.2px;
+  }
   #diffRow { display: flex; gap: 10px; margin-top: 16px; }
   .diffBtn {
-    padding: 8px 16px;
+    padding: 8px 18px;
     border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.4);
     background: rgba(255,255,255,0.05);
     color: #fff;
     cursor: pointer;
     font-size: 14px;
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
   }
   .diffBtn:active { transform: scale(0.94); }
+  @media (hover: hover) {
+    .diffBtn:not(.active):hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.6); }
+  }
   .diffBtn.active { background: #1976d2; border-color: #64b5f6; box-shadow: 0 0 12px rgba(25,118,210,0.6); }
   #touchControls {
     position: absolute;
@@ -233,26 +258,37 @@
   #fireBtn {
     width: 84px; height: 84px;
     border-radius: 50%;
-    background: rgba(255,82,82,0.45);
-    border: 2px solid rgba(255,255,255,0.6);
+    background: radial-gradient(circle at 35% 30%, rgba(255,140,140,0.7), rgba(255,60,60,0.5) 60%, rgba(200,20,20,0.4));
+    border: 2px solid rgba(255,255,255,0.65);
     color: #fff;
-    font-weight: bold;
+    font-weight: 800;
     font-size: 14px;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 14px rgba(255,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.4);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+  #fireBtn:active {
+    transform: scale(0.92);
+    box-shadow: 0 2px 8px rgba(255,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
   }
   #joystickBase {
     position: absolute;
     width: 100px; height: 100px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.12);
     border: 2px solid rgba(255,255,255,0.4);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25), inset 0 0 12px rgba(255,255,255,0.08);
     display: none;
   }
   #joystickStick {
     position: absolute;
     width: 44px; height: 44px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.55);
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.5) 70%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     left: 28px; top: 28px;
+    transition: left 0.03s linear, top 0.03s linear;
   }
   [hidden] { display: none !important; }
 </style>
@@ -265,7 +301,7 @@
 
   <div id="hud">
     <div class="stat"><span class="label">Score</span><span class="val" id="score">0</span></div>
-    <div class="stat"><span class="label">Best</span><span class="val" id="best">0</span></div>
+    <div class="stat"><span class="label">🏆 Best</span><span class="val" id="best">0</span></div>
     <div class="stat" id="hearts"></div>
   </div>
 
@@ -292,11 +328,12 @@
         <div>Best: <b id="finalBest">0</b></div>
       </div>
       <div id="diffRow">
-        <button class="diffBtn" data-diff="easy">Easy</button>
-        <button class="diffBtn active" data-diff="normal">Normal</button>
-        <button class="diffBtn" data-diff="hard">Hard</button>
+        <button class="diffBtn" data-diff="easy">🙂 Easy</button>
+        <button class="diffBtn active" data-diff="normal">⚔️ Normal</button>
+        <button class="diffBtn" data-diff="hard">🔥 Hard</button>
       </div>
       <button id="startBtn">Start Game</button>
+      <p id="footerHint">Tip: grab the green orb for a rapid-fire boost ⚡</p>
     </div>
   </div>
 </div>
@@ -695,6 +732,9 @@
           bullets.splice(j, 1);
           score += 10;
           scoreEl.textContent = score;
+          scoreEl.classList.remove('bump');
+          void scoreEl.offsetWidth;
+          scoreEl.classList.add('bump');
           sfx.explode();
           kills++;
           if (kills > 0 && kills % 10 === 0) showComboPop(kills + ' KILLS!');
