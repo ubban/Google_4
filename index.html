@@ -7,16 +7,35 @@
 <meta name="theme-color" content="#0b1d3a">
 <title>Sky Fighter</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b1d3a'/%3E%3Cpath d='M16 4l8 16-8-4-8 4z' fill='%231976d2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --accent: #4fc3ff;
+    --accent-dim: #1976d2;
+    --gold: #ffcc33;
+    --danger: #ff5252;
+    --success: #7CFC00;
+    --ink: #eaf4ff;
+    --panel: rgba(8,20,42,0.62);
+    --panel-border: rgba(120,180,255,0.28);
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
     background: #05122b;
-    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    font-family: 'Rajdhani', 'Segoe UI', Roboto, Arial, sans-serif;
+    color: var(--ink);
     touch-action: none;
     user-select: none;
   }
+  .display {
+    font-family: 'Orbitron', 'Segoe UI', Roboto, Arial, sans-serif;
+  }
+  button, .iconBtn, .diffBtn { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   #container {
     position: fixed; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -35,13 +54,13 @@
     position: absolute;
     top: max(10px, env(safe-area-inset-top));
     left: 50%; transform: translateX(-50%);
-    color: #fff;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
     font-size: clamp(12px, 2.8vw, 16px);
     display: flex;
     flex-wrap: wrap;
+    align-items: stretch;
     justify-content: center;
-    gap: clamp(6px, 2vw, 12px);
+    gap: clamp(5px, 1.6vw, 9px);
     max-width: 96vw;
     pointer-events: none;
     z-index: 5;
@@ -50,15 +69,27 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: rgba(0,0,0,0.32);
-    border: 1px solid rgba(255,255,255,0.25);
-    padding: 5px 11px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    padding: 5px 12px;
     border-radius: 999px;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
     white-space: nowrap;
   }
-  #hud .label { opacity: 0.75; font-weight: 400; }
-  #hud .val { font-weight: 700; color: #ffd54f; }
+  #hud .stat.primary {
+    background: rgba(10,28,58,0.75);
+    border-color: rgba(255,213,79,0.35);
+    padding: 5px 14px;
+  }
+  #hud .label {
+    opacity: 0.68;
+    font-weight: 600;
+    font-size: 0.82em;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  #hud .val { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gold); }
+  #hud .stat.primary .val { font-family: 'Orbitron', inherit; font-size: 1.05em; }
   #hearts { display: flex; gap: 3px; }
   #hearts span { font-size: clamp(12px, 2.8vw, 16px); filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8)); display: inline-block; }
   #hearts span.lost { opacity: 0.25; filter: none; }
@@ -66,7 +97,7 @@
   #bombs { display: flex; gap: 3px; }
   #bombs span { font-size: clamp(12px, 2.8vw, 16px); filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8)); display: inline-block; opacity: 0.3; }
   #bombs span.have { opacity: 1; }
-  #weaponStat .val { color: #7CFC00; }
+  #weaponStat .val { color: var(--success); }
   #multStat .val { color: #ff8a65; }
   @keyframes heartBeat {
     0%, 100% { transform: scale(1); }
@@ -159,11 +190,12 @@
   #bossBarWrap.show { opacity: 1; }
   #bossName {
     color: #fff;
+    font-family: 'Orbitron', inherit;
     font-size: clamp(11px, 2.6vw, 14px);
     text-align: center;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
-    margin-bottom: 3px;
-    letter-spacing: 1px;
+    margin-bottom: 4px;
+    letter-spacing: 1.5px;
   }
   #bossBarTrack {
     height: 10px;
@@ -175,7 +207,7 @@
   #bossBarFill {
     height: 100%;
     width: 100%;
-    background: linear-gradient(90deg, #ff5252, #ff8a00);
+    background: linear-gradient(90deg, var(--danger), #ff8a00);
     transition: width 0.15s ease;
   }
   #topBar {
@@ -186,17 +218,19 @@
     display: flex; gap: 8px;
   }
   .iconBtn {
-    background: rgba(0,0,0,0.35);
-    border: 1px solid rgba(255,255,255,0.3);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
     color: #fff;
-    width: 36px; height: 36px;
+    width: 38px; height: 38px;
     border-radius: 50%;
     font-size: 16px;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     line-height: 1;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
   }
-  .iconBtn:active { background: rgba(255,255,255,0.25); }
+  .iconBtn:hover { border-color: var(--accent); background: rgba(20,60,110,0.55); }
+  .iconBtn:active { background: rgba(255,255,255,0.25); transform: scale(0.92); }
   #overlay {
     position: absolute;
     inset: 0;
@@ -210,19 +244,22 @@
     overflow-y: auto;
   }
   #overlay h1 {
-    font-size: clamp(32px, 8vw, 52px);
-    margin: 0 0 6px;
+    font-family: 'Orbitron', inherit;
+    font-weight: 800;
+    font-size: clamp(30px, 7.5vw, 48px);
+    margin: 0 0 8px;
     text-shadow: 0 0 24px rgba(25,118,210,0.8), 2px 2px 6px #000;
-    letter-spacing: 1px;
-    background: linear-gradient(180deg, #fff 20%, #ffd54f 100%);
+    letter-spacing: 2px;
+    text-wrap: balance;
+    background: linear-gradient(180deg, #fff 20%, var(--gold) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  #overlay p { font-size: clamp(13px, 3vw, 16px); margin: 4px; opacity: 0.85; max-width: 460px; }
+  #overlay p { font-size: clamp(13px, 3vw, 16px); margin: 4px; opacity: 0.85; max-width: 460px; text-wrap: balance; }
   #overlayCard {
-    background: rgba(10,22,48,0.55);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: linear-gradient(180deg, rgba(14,30,60,0.6), rgba(8,18,40,0.62));
+    border: 1px solid var(--panel-border);
     backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: clamp(24px, 5vw, 40px) clamp(20px, 6vw, 48px);
@@ -246,47 +283,70 @@
     0%, 100% { transform: translateY(0) rotate(-6deg); }
     50% { transform: translateY(-6px) rotate(4deg); }
   }
-  #statsRow { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 24px; margin: 14px 0; font-size: clamp(13px, 2.8vw, 17px); }
-  #statsRow b { color: #ffd54f; }
+  #statsRow {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 14px;
+    margin: 16px 0; font-size: clamp(13px, 2.8vw, 16px);
+  }
+  #statsRow > div {
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 8px 16px;
+  }
+  #statsRow b { display: block; font-family: 'Orbitron', inherit; color: var(--gold); font-size: 1.15em; margin-top: 2px; }
   #newBest {
-    color: #7CFC00;
+    color: var(--success);
     font-weight: 700;
     font-size: clamp(13px, 3vw, 16px);
     margin: 0 0 4px;
     text-shadow: 0 0 10px rgba(124,252,0,0.6);
   }
   #startBtn {
-    margin-top: 18px;
-    padding: 14px 38px;
+    margin-top: 20px;
+    padding: 14px 40px;
     font-size: clamp(16px, 4vw, 20px);
-    background: linear-gradient(180deg, #ffe066, #ffcc00);
+    background: linear-gradient(180deg, #ffe066, var(--gold));
     border: none;
     border-radius: 999px;
     cursor: pointer;
     font-weight: 700;
+    letter-spacing: 0.5px;
     color: #3a2a00;
-    box-shadow: 0 4px 14px rgba(255,204,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6);
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    box-shadow: 0 4px 14px rgba(255,204,0,0.45), inset 0 1px 0 rgba(255,255,255,0.6);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
   }
+  #startBtn:hover { filter: brightness(1.06); box-shadow: 0 6px 18px rgba(255,204,0,0.55), inset 0 1px 0 rgba(255,255,255,0.6); }
   #startBtn:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(255,204,0,0.4); }
-  #diffRow { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
+  #diffRow { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
   .diffBtn {
-    padding: 8px 16px;
+    padding: 8px 18px;
     border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.4);
+    border: 1px solid rgba(255,255,255,0.35);
     background: rgba(255,255,255,0.05);
     color: #fff;
     cursor: pointer;
     font-size: 14px;
+    font-weight: 600;
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
   }
+  .diffBtn:hover { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.1); }
   .diffBtn:active { transform: scale(0.94); }
-  .diffBtn.active { background: #1976d2; border-color: #64b5f6; box-shadow: 0 0 12px rgba(25,118,210,0.6); }
+  .diffBtn.active { background: var(--accent-dim); border-color: #64b5f6; box-shadow: 0 0 12px rgba(25,118,210,0.6); }
   #controlsHint {
-    margin-top: 14px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.12);
     font-size: clamp(11px, 2.4vw, 13px);
-    opacity: 0.7;
-    line-height: 1.5;
+    opacity: 0.65;
+    line-height: 1.6;
+  }
+  #controlsHint kbd {
+    font-family: inherit;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.92em;
   }
   #touchControls {
     position: absolute;
@@ -311,16 +371,21 @@
     width: 78px; height: 78px;
     border-radius: 50%;
     color: #fff;
-    font-weight: bold;
+    font-weight: 700;
+    letter-spacing: 0.5px;
     font-size: 13px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
     pointer-events: auto;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform 0.08s ease;
   }
+  #fireBtn:active, #bombBtn:active { transform: scale(0.92); }
   #fireBtn {
-    background: rgba(255,82,82,0.45);
+    background: radial-gradient(circle at 35% 30%, rgba(255,130,130,0.65), rgba(255,82,82,0.4));
     border: 2px solid rgba(255,255,255,0.6);
   }
   #bombBtn {
-    background: rgba(255,193,7,0.5);
+    background: radial-gradient(circle at 35% 30%, rgba(255,222,120,0.7), rgba(255,193,7,0.45));
     border: 2px solid rgba(255,255,255,0.6);
     align-self: flex-start;
   }
@@ -365,7 +430,7 @@
   <div id="flash"></div>
 
   <div id="hud">
-    <div class="stat"><span class="label">Score</span><span class="val" id="score">0</span></div>
+    <div class="stat primary"><span class="label">Score</span><span class="val" id="score">0</span></div>
     <div class="stat"><span class="label">Best</span><span class="val" id="best">0</span></div>
     <div class="stat" id="multStat"><span class="label">x</span><span class="val" id="mult">1</span></div>
     <div class="stat" id="weaponStat"><span class="label" id="weaponName">VULCAN</span><span class="val" id="weaponLvl">1</span></div>
@@ -404,9 +469,9 @@
       <p id="overlaySub">Blast through stages, collect weapon power-ups, and detonate smart bombs to survive the boss squadrons.</p>
       <p id="newBest" hidden>🏆 New Best Score!</p>
       <div id="statsRow" hidden>
-        <div>Score: <b id="finalScore">0</b></div>
-        <div>Stage: <b id="finalStage">1</b></div>
-        <div>Best: <b id="finalBest">0</b></div>
+        <div>Score<b id="finalScore">0</b></div>
+        <div>Stage<b id="finalStage">1</b></div>
+        <div>Best<b id="finalBest">0</b></div>
       </div>
       <div id="diffRow">
         <button class="diffBtn" data-diff="easy">Easy</button>
@@ -414,7 +479,7 @@
         <button class="diffBtn" data-diff="hard">Hard</button>
       </div>
       <button id="startBtn">Start Game</button>
-      <p id="controlsHint">Mouse: move to steer, click to fire · Arrows/WASD move · Space fire · X or Shift bomb · P/Esc pause<br>Mobile: drag left to fly, tap FIRE, tap BOMB</p>
+      <p id="controlsHint">🖱️ Move to steer, click to fire &nbsp;·&nbsp; <kbd>WASD</kbd>/<kbd>&#8592;&#8593;&#8594;&#8595;</kbd> move &nbsp;·&nbsp; <kbd>Space</kbd> fire &nbsp;·&nbsp; <kbd>X</kbd>/<kbd>Shift</kbd> bomb &nbsp;·&nbsp; <kbd>P</kbd> pause<br>📱 Drag left side to fly · tap FIRE / BOMB</p>
     </div>
   </div>
 </div>
