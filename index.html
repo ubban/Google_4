@@ -743,6 +743,39 @@
     }
   };
 
+  // ---------- Background music (procedural, synced to the sfx engine) ----------
+  const MUSIC_BPM = 132;
+  const STEP_DUR = 60 / MUSIC_BPM / 2; // eighth notes
+  // A minor progression: i - VI - III - VII, played as a walking bass + arpeggio.
+  const BASS_NORMAL = [110, 110, 87.3, 87.3, 130.8, 130.8, 98, 98];
+  const ARP_NORMAL = [220, 261.6, 329.6, 261.6, 174.6, 261.6, 196, 293.7];
+  const BASS_BOSS = [82.4, 82.4, 87.3, 87.3, 110, 110, 98, 98];
+  const ARP_BOSS = [164.8, 196, 220, 196, 174.6, 207.7, 196, 233.1];
+  let musicInterval = null;
+  let musicStep = 0;
+  let musicIntensity = 'normal';
+  function musicTick() {
+    if (muted || !audioCtx) return;
+    const boss = musicIntensity === 'boss';
+    const bass = boss ? BASS_BOSS : BASS_NORMAL;
+    const arp = boss ? ARP_BOSS : ARP_NORMAL;
+    const i = musicStep % 8;
+    beep(bass[i], STEP_DUR * 1.7, 'triangle', boss ? 0.06 : 0.045, { filterFreq: 420 });
+    beep(arp[i], STEP_DUR * 0.85, 'sine', boss ? 0.03 : 0.022, { filterFreq: 2400 });
+    if (boss && i % 2 === 0) noiseBurst(0.05, 0.018, { filterFreq: 5000 });
+    musicStep++;
+  }
+  function startMusic() {
+    if (musicInterval || !audioCtx) return;
+    musicStep = 0;
+    musicTick();
+    musicInterval = setInterval(musicTick, STEP_DUR * 1000);
+  }
+  function stopMusic() {
+    if (musicInterval) { clearInterval(musicInterval); musicInterval = null; }
+  }
+  function setMusicIntensity(level) { musicIntensity = level; }
+
   const EXPLODE_SFX = { grunt: 'explodeGrunt', interceptor: 'explodeInterceptor', tank: 'explodeTank' };
 
   function renderHearts(count, max) {
@@ -976,6 +1009,8 @@
     bossBarWrap.classList.remove('show');
     kills = 0;
     showStageBanner('STAGE 1');
+    setMusicIntensity('normal');
+    startMusic();
   }
 
   function drawPlane(x, y, w, h, color, darkColor, flame) {
@@ -1121,6 +1156,7 @@
     bossNameEl.textContent = 'STAGE ' + stage + ' — ' + design.name;
     bossBarWrap.classList.add('show');
     showStageBanner('WARNING — ' + design.name + ' APPROACHING');
+    setMusicIntensity('boss');
   }
 
   function maybeSpawnPowerUp(x, y) {
@@ -1515,6 +1551,7 @@
     stageKills = 0;
     bossWarned = false;
     showStageBanner('STAGE ' + stage);
+    setMusicIntensity('normal');
     announce('Boss defeated. Entering stage ' + stage + ': ' + THEMES[(stage - 1) % THEMES.length].name);
   }
 
@@ -1534,6 +1571,7 @@
   function endGame() {
     running = false;
     gameOver = true;
+    stopMusic();
     sfx.gameover();
     screenShake(16, 0.4);
     const isNewBest = score > bestScore;
@@ -1563,8 +1601,10 @@
       statsRow.hidden = true;
       startBtn.textContent = 'Resume';
       overlay.hidden = false;
+      stopMusic();
     } else {
       overlay.hidden = true;
+      startMusic();
     }
   }
   pauseBtn.addEventListener('click', () => { sfx.uiClick(); togglePause(); });
