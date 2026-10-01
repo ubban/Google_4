@@ -962,7 +962,7 @@
   canvas.addEventListener('mouseleave', () => { mouseActive = false; });
 
   // ---------- Game state ----------
-  let player, bullets, enemies, enemyBullets, particles, powerUps, boss;
+  let player, bullets, enemies, enemyBullets, particles, powerUps, popups, boss;
   let score = 0, lives = 3, maxLives = 3, running = false, paused = false, gameOver = false;
   let bombCount = 0, maxBombs = 2, bombFlashTimer = 0;
   let spawnTimer = 0, frame = 0, kills = 0, stage = 1, stageKills = 0, bossWarned = false;
@@ -981,6 +981,7 @@
     enemyBullets = [];
     particles = [];
     powerUps = [];
+    popups = [];
     boss = null;
     score = 0;
     lives = d.lives;
@@ -1097,6 +1098,12 @@
     ctx.beginPath();
     ctx.ellipse(0, 0, w / 2.4, h / 2.1, 0, 0, Math.PI * 2);
     ctx.fill();
+    if (b.hitFlash > 0) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
 
     const telegraphing = b.telegraph > 0;
     ctx.fillStyle = telegraphing ? '#ffffff' : design.core;
@@ -1313,7 +1320,21 @@
     enemyBullets.forEach(b => { b.y += b.speed * dt; if (b.vx) b.x += b.vx * dt; });
     enemyBullets = enemyBullets.filter(b => b.y < canvas.height + 20);
 
-    powerUps.forEach(p => p.y += p.speed * dt);
+    powerUps.forEach(p => {
+      const dx = player.x - p.x, dy = player.y - p.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 110 && dist > 1) {
+        const pull = 320 * (1 - dist / 110);
+        p.x += (dx / dist) * pull * dt;
+        p.y += (dy / dist) * pull * dt;
+      }
+      p.y += p.speed * dt;
+    });
+
+    popups.forEach(pp => { pp.y -= 40 * dt; pp.life -= dt; });
+    popups = popups.filter(pp => pp.life > 0);
+    enemies.forEach(en => { if (en.hitFlash > 0) en.hitFlash -= dt; });
+    if (boss && boss.hitFlash > 0) boss.hitFlash -= dt;
     powerUps = powerUps.filter(p => p.y < canvas.height + 20);
 
     if (!boss) {
@@ -1357,6 +1378,7 @@
         const b = bullets[j];
         if (rectsOverlap(en, b)) {
           en.hp--;
+          en.hitFlash = 0.07;
           spawnExplosion(b.x, b.y, '#ffcc80', 4);
           if (!b.laser || b.pierce <= 0) { bullets.splice(j, 1); } else { b.pierce--; }
           if (en.hp <= 0) {
@@ -1364,6 +1386,7 @@
             maybeSpawnPowerUp(en.x, en.y);
             enemies.splice(i, 1);
             addScore(en.score);
+            popups.push({ x: en.x, y: en.y, text: '+' + en.score * multiplier, life: 0.7, maxLife: 0.7, big: multiplier > 1 });
             sfx[EXPLODE_SFX[en.type]] ? sfx[EXPLODE_SFX[en.type]](en.x) : sfx.explode(en.x);
             kills++;
             stageKills++;
@@ -1379,6 +1402,7 @@
         const b = bullets[j];
         if (rectsOverlap(boss, b)) {
           boss.hp -= 3;
+          boss.hitFlash = 0.05;
           spawnExplosion(b.x, b.y, '#ff9de2', 3);
           if (!b.laser || b.pierce <= 0) { bullets.splice(j, 1); } else { b.pierce--; }
           sfx.bossHit(boss.x);
@@ -1778,7 +1802,8 @@
     ctx.restore();
 
     enemies.forEach(en => {
-      drawPlane(en.x, en.y, en.w, en.h, en.color, en.dark, false);
+      const flash = en.hitFlash > 0;
+      drawPlane(en.x, en.y, en.w, en.h, flash ? '#ffffff' : en.color, flash ? '#ffd0d0' : en.dark, false);
       if (en.type === 'tank') {
         const type = ENEMY_TYPES.tank;
         const pct = Math.max(0, en.hp / type.hp);
@@ -1792,13 +1817,29 @@
     if (boss) drawBossShip(boss);
 
     powerUps.forEach(p => {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(frame * 0.1);
       const color = p.type === 'life' ? '#ff5252' : p.type === 'bomb' ? '#ffc107' : '#7CFC00';
-      if (glow) { ctx.shadowColor = color; ctx.shadowBlur = 10; }
+      const glyph = p.type === 'life' ? '\u2665' : p.type === 'bomb' ? 'B' : 'P';
+      const r = p.w * 0.62;
+      ctx.save();
+      ctx.translate(p.x, p.y + Math.sin(frame * 0.12 + p.x) * 2);
+      ctx.globalAlpha = 0.35 + 0.25 * Math.sin(frame * 0.2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      if (glow) { ctx.shadowColor = color; ctx.shadowBlur = 12; }
       ctx.fillStyle = color;
-      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(10,20,40,0.85)';
+      ctx.font = 'bold 14px Orbitron, Rajdhani, Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(glyph, 0, 1);
       ctx.restore();
     });
 
@@ -1821,6 +1862,20 @@
         ctx.shadowBlur = 0;
       }
       ctx.globalAlpha = 1;
+    });
+
+    popups.forEach(pp => {
+      const t = Math.max(pp.life / pp.maxLife, 0);
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, t * 1.6);
+      ctx.font = (pp.big ? 'bold 17px' : 'bold 13px') + ' Orbitron, Rajdhani, Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.strokeText(pp.text, pp.x, pp.y);
+      ctx.fillStyle = pp.big ? '#ffcc33' : '#ffffff';
+      ctx.fillText(pp.text, pp.x, pp.y);
+      ctx.restore();
     });
     ctx.restore();
   }
