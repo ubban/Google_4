@@ -1,0 +1,146 @@
+# Sky Fighter - Codebase Documentation
+
+## Project Overview
+
+**Sky Fighter** is a Raiden-style vertical shoot-'em-up arcade game built with vanilla HTML5 Canvas and JavaScript. Players control a fighter jet to destroy enemies, collect power-ups, defeat stage bosses, and compete for high scores.
+
+## Repository Structure
+
+```
+Google_4/
+├── README.md          # Basic project info with timestamp
+├── index.html         # Single-page application containing all game code
+└── .git/              # Git repository metadata
+```
+
+## Key Files
+
+### `index.html` (~58KB)
+The main and only game file. Contains:
+- **HTML structure**: Canvas container, HUD (heads-up display), vignette effect, flash effect
+- **CSS styling**: Dark theme (#05122b background), responsive layout, animations (heartBeat, vignettePulse, flashHit, flashBomb)
+- **JavaScript game engine**: Complete game logic, physics, collision detection, sprite rendering
+
+## Game Features
+
+### Core Gameplay
+- **Player Control**: Arrow keys (desktop) or WASD for movement; mouse click or touch tap to shoot
+- **Weapon System**: 
+  - Standard bullets (unlimited)
+  - Spread shot (3-way burst)
+  - Laser (continuous beam)
+  - Tracking homing missiles
+  - Smart bombs (screen-clear special weapon)
+- **Health System**: 3 hearts; hit by enemies or projectiles loses 1 heart
+- **Bomb System**: Limited smart bombs that clear screen and grant invulnerability frames
+- **Score Multiplier**: Increases with consecutive hits without taking damage; resets on hit
+- **Power-ups**: Weapon drops, health restoration, bomb grants
+
+### Visual Effects
+- **Gradient sky background** (blue gradient from dark to light)
+- **Hit flash effect** (white screen flash on damage)
+- **Vignette effect** (red pulse when taking damage)
+- **Sprite animations** and particle effects
+- **Responsive canvas** that scales to fit viewport
+- **Touch-friendly HUD** with status indicators (hearts, bombs, weapon, multiplier)
+
+### Game Progression
+- **Multi-stage gameplay** with difficulty escalation
+- **Stage bosses** with unique patterns and behavior
+- **Wave-based enemy spawning**
+- **Progressive difficulty** as waves advance
+
+## Technical Architecture
+
+### Game Loop
+```
+requestAnimationFrame() → Update game state → Render canvas → Repeat
+```
+
+### Core Systems
+1. **Input Handling**: Keyboard (WASD/Arrows), mouse click, touch/tap
+2. **Collision Detection**: Rectangle-based AABB collision for bullets, enemies, pickups
+3. **Sprite Rendering**: Canvas 2D API for all visual elements
+4. **Physics**: Simple movement with velocity, no gravity
+5. **UI/HUD**: Overlay showing health, bombs, weapon type, score multiplier
+
+### Game States
+- Starting/Menu
+- Gameplay (waves of enemies)
+- Boss battles (stage bosses)
+- Damage/Hit effects
+- Game Over
+- Score display
+
+## How to Run
+
+1. Open `index.html` in any modern web browser
+2. Game automatically starts
+3. Use arrow keys or WASD to move
+4. Click or tap to shoot
+5. Press Space to drop smart bomb (if available)
+
+**Desktop Controls:**
+- Arrow Keys or WASD: Move
+- Mouse Click: Shoot
+- Space: Smart Bomb
+
+**Mobile Controls:**
+- Touch drag to move
+- Tap to shoot
+- On-screen UI for bomb usage
+
+## Development Notes
+
+### Canvas & Rendering
+- **Resolution**: Dynamic, scales to viewport size
+- **Color Scheme**: Dark blue aesthetic (#05122b, #0d2f5e, #1e6fd8)
+- **Safe area support**: Uses `env(safe-area-inset-*)` for notched devices
+
+### Performance Considerations
+- Single canvas for all rendering
+- Efficient sprite pooling for bullets and particles
+- RequestAnimationFrame for smooth 60fps gameplay
+- Touch-action: none to prevent browser defaults
+- User-select: none to prevent text selection during play
+
+### Known Features
+- **Weapon variety**: 5+ different weapon types with unique behavior
+- **Enemy variety**: Multiple enemy types with different patterns
+- **Boss encounters**: Stage bosses with complex attack patterns
+- **Score system**: Multiplier-based scoring for skill-based high scores
+- **Accessibility**: Hearts display for health, bombs visual indicator
+
+## Browser Compatibility
+
+Requires:
+- HTML5 Canvas support
+- Modern JavaScript (ES6+)
+- Touch event support (optional, for mobile)
+- CSS Grid/Flexbox support
+
+Tested on:
+- Chrome/Chromium
+- Firefox
+- Safari
+- Mobile browsers (iOS Safari, Chrome Android)
+
+## Future Enhancement Ideas
+
+- Persistent high score storage (localStorage)
+- Game settings/difficulty selection
+- Sound effects and background music
+- Additional boss stages
+- Leaderboard system
+- Pause/resume functionality
+- Tutorial or difficulty modes
+- Character selection/skins
+
+## Session History
+
+- **Initial commit**: Project setup with basic structure
+- **Main feature commit**: "Add Sky Fighter: Raiden-style vertical shoot-em-up game" - Complete game implementation with all core features, weapons, enemies, and boss battles
+
+---
+
+*This documentation was generated by Claude Code agent to support future development and maintenance of the Sky Fighter game.*
