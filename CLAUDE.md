@@ -8,7 +8,7 @@ Google_4 is a small static web project. Its only real content is **Sky Fighter**
 
 ## Repository layout
 
-- `index.html` — the whole game: inline `<style>` (about lines 10–361), the markup (about lines 362–421), and one inline `<script>` (about lines 422–1668) wrapped in an IIFE with `'use strict'`.
+- `index.html` — the whole game: inline `<style>` (about lines 10–359), the markup (about lines 360–421), and one inline `<script>` (about lines 422–1668) wrapped in an IIFE with `'use strict'`.
 - `README.md` — a placeholder with no project documentation.
 - No `package.json`, build step, bundler, linter, or test suite. Nothing is installed or compiled.
 
