@@ -11,8 +11,8 @@ There is no build step, package manager, test suite, or linter. Open `index.html
 ## Layout
 
 - `index.html` (~1,670 lines)
-  - `<style>` (around lines 10–362): HUD, overlay card, touch controls, animations, reduced-motion styles.
-  - `<body>` markup (from line 363): `#gameCanvas`, HUD elements, overlay, touch controls.
+  - `<style>` (lines 10–359): HUD, overlay card, touch controls, animations, reduced-motion styles.
+  - `<body>` markup (from line 361): `#gameCanvas`, HUD elements, overlay, touch controls.
   - One `<script>` IIFE (from line 422, `'use strict'`) containing all game logic. Nothing is exported; state lives in closures.
 - `README.md`: placeholder.
 
