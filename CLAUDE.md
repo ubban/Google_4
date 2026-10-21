@@ -6,9 +6,9 @@ Guidance for Claude Code when working in this repository.
 
 A single-file browser game, **Sky Fighter** (a Raiden-style vertical shoot-'em-up). Everything lives in `index.html`:
 
-- `<style>` (about lines 10–361): layout, HUD, overlay, touch controls, reduced-motion and mobile rules.
-- `<body>` markup (about lines 362–421): `#container`, `<canvas id="gameCanvas">`, HUD, boss bar, touch controls, start/pause overlay.
-- One inline `<script>` (about lines 422–1667) wrapped in an IIFE with `'use strict'`. All game state and logic is private to that closure.
+- `<style>` (lines 10–359): layout, HUD, overlay, touch controls, reduced-motion and mobile rules.
+- `<body>` markup (lines 362–421): `#container`, `<canvas id="gameCanvas">`, HUD, boss bar, touch controls, start/pause overlay.
+- One inline `<script>` (lines 422–1667) wrapped in an IIFE with `'use strict'`. All game state and logic is private to that closure.
 
 `README.md` is a stub. There is no build step, package manager, test suite, or linter. No dependencies are loaded from a CDN.
 
