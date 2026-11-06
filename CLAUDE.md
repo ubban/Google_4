@@ -22,7 +22,7 @@ The script is wrapped in `(function () { 'use strict'; ... })()` and keeps all s
 
 - **DOM references**: `getElementById` lookups at the top of the IIFE.
 - **Persistence**: `localStorage` keys prefixed `skyfighter.` (`bestScore`, `muted`, `difficulty`, `reducedMotion`). Every read and write is at top level, with no try/catch.
-- **Adaptive performance**: `trackPerf(dt)` samples the last 45 frames and moves `quality` between 0 (full), 1 (medium), and 2 (low). Particle and cloud density respond to it.
+- **Adaptive performance**: `trackPerf(dt)` samples the last 45 frames and moves `quality` between 0 (full), 1 (medium), and 2 (low). It scales explosion particle counts (`spawnExplosion`) and turns off glow (`shadowBlur`) at lower levels.
 - **Tuning tables**: `DIFFICULTIES` (spawn rate, enemy speed, shot chance, lives, bombs, boss HP multiplier), `THEMES` (sky palettes, one per stage cycle), `ENEMY_TYPES` (grunt, interceptor, tank), `BOSSES` (six bosses with colors and HP multipliers), and `KILLS_PER_STAGE` (18).
 - **Audio**: a lazily created Web Audio context (`ensureAudio`). Sound effects go through `beep`, `noiseBurst`, and the `sfx` object. Audio is created on first user gesture.
 - **Canvas sizing**: fixed logical resolution `BASE_W × BASE_H` = 480 × 720, scaled to fit the window (capped at 1.6×) in `resize()`.
