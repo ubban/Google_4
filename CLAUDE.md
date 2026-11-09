@@ -26,9 +26,9 @@ Since there are no tests, do this before committing any change to the game logic
 
 ## Code layout (`index.html`)
 
-- **CSS** (lines ~6–360): `:root { color-scheme: dark; }`, HUD pills (`#hud .stat`), boss bar, overlay card, touch controls, and a `prefers-reduced-motion` path.
-- **DOM** (lines ~362–420): `#container` holds the `#gameCanvas`, the HUD (`#hud`), boss bar, combo/stage banners, `#topBar` (mute, reduced-motion, pause buttons), `#touchControls` (joystick + FIRE/BOMB), and `#overlay` (start/pause/game-over card with difficulty buttons `.diffBtn`).
-- **Script** (lines ~424 onward), all inside one IIFE:
+- **CSS** (lines ~10–359): `:root { color-scheme: dark; }`, HUD pills (`#hud .stat`), boss bar, overlay card, touch controls, and a `prefers-reduced-motion` path.
+- **DOM** (lines ~360–421): `#container` holds the `#gameCanvas`, the HUD (`#hud`), boss bar, combo/stage banners, `#topBar` (mute, reduced-motion, pause buttons), `#touchControls` (joystick + FIRE/BOMB), and `#overlay` (start/pause/game-over card with difficulty buttons `.diffBtn`).
+- **Script** (from line ~422), all inside one IIFE:
   - DOM references (`canvas`, `overlay`, `scoreEl`, …) are cached at the top.
   - `STORAGE_*` keys and `localStorage` reads/writes: best score, mute, difficulty, reduced motion.
   - Audio: `ensureAudio()` lazily creates the `AudioContext`; `beep`, `noiseBurst`, and the `sfx` map provide all sound effects. No audio files.
