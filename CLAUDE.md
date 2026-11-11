@@ -18,7 +18,7 @@ This repo is **Sky Fighter**, a single-file, browser-based, Raiden-style vertica
 
 ## Code layout inside `index.html`
 
-The script is wrapped in one IIFE with `'use strict'`-style module-private state. Key sections, in source order:
+The script is one `'use strict'` IIFE, so all game state is module-private. Key sections, in source order:
 
 1. **DOM references** — `getElementById` lookups for HUD, overlay, touch controls, and boss bar.
 2. **Storage keys** — `skyfighter.bestScore`, `skyfighter.muted`, `skyfighter.difficulty`, `skyfighter.reducedMotion` (all in `localStorage`, all read/written defensively as strings).
