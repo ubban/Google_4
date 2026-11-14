@@ -8,7 +8,7 @@ This repo contains **Sky Fighter**, a single-file, browser-based Raiden-style ve
 
 Files:
 
-- `index.html` (~1670 lines): the entire game. Inline `<style>` (lines ~10–361), the DOM/HUD/overlay markup (lines ~362–421), and one inline `<script>` IIFE (lines ~422–1668) that holds all game logic, rendering, audio, and input.
+- `index.html` (~1670 lines): the entire game. Inline `<style>` (lines ~10–359), the DOM/HUD/overlay markup (lines ~362–421), and one inline `<script>` IIFE (lines ~422–1668) that holds all game logic, rendering, audio, and input.
 - `README.md`: a one-line title. It contains no setup instructions.
 
 ## Running and testing
