@@ -64,6 +64,7 @@ stable, or add migration logic if a change is unavoidable.
 
 ## Controls (for reference when changing input)
 
+- **Mouse**: move to steer, click to fire (see `canvasPointFromEvent`).
 - **Keyboard**: arrow keys / WASD move (via `keys[e.code]`), Space fires, `X` / Shift
   uses a bomb, `P` / Escape pauses.
 - **Touch**: virtual joystick in `#moveZone`, `#fireBtn` (hold to fire), `#bombBtn`.
