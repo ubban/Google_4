@@ -6,7 +6,7 @@ Guidance for Claude Code when working in this repository.
 
 `Google_4` is a small static project. Its only real content is **Sky Fighter**, a Raiden-style vertical shoot-em-up built as a single-page HTML5 canvas game.
 
-- `index.html` — the whole game: markup, CSS (`<style>`, ~lines 10–362), canvas element, and one inline IIFE `<script>` (~lines 422–end).
+- `index.html` — the whole game: markup, CSS (`<style>`, ~lines 10–359), canvas element, and one inline IIFE `<script>` (~lines 422–end).
 - `README.md` — placeholder title only.
 - `CLAUDE.md` — this file.
 
