@@ -6,8 +6,8 @@ Guidance for Claude Code when working in this repository.
 
 This repo is **Sky Fighter**, a single-file, Raiden-style vertical shoot-'em-up
 built as an HTML5 canvas app. Everything lives in `index.html`: markup, CSS
-(`<style>`, roughly lines 10–361), canvas element, and one IIFE `<script>`
-(roughly lines 422–1668) with all game logic. `README.md` is a placeholder.
+(`<style>`, lines 10–359), canvas element, and one IIFE `<script>`
+(lines 422–1667) with all game logic. `README.md` is a placeholder.
 
 There is no package manager, build step, bundler, test suite, linter, or CI
 configuration. Do not invent commands for these. To run the game, open
